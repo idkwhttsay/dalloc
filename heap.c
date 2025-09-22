@@ -1,10 +1,7 @@
 #include "heap.h"
 #include <stdio.h>
 
-static_assert(HEAP_CAP % sizeof(uintptr_t) == 0, 
-    "The heap capacity is not divisible by the size of a word of the OS (platform)");
-uintptr_t heap[HEAP_CAP] = {0};
-
+uintptr_t heap[HEAP_CAP_WORDS] = {0};
 
 Chunk_List alloced_chunks = {0};
 Chunk_List freed_chunks = {
