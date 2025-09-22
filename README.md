@@ -1,3 +1,3 @@
 # dalloc
 
-**A crappy memory allocator written in C with garbage collection**
+**A crappy (pseudo) memory allocator written in C with garbage collection**

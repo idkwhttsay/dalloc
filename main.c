@@ -2,12 +2,18 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define HEAP_CAP 640000
+
+static_assert(HEAP_CAP % sizeof(uintptr_t) == 0, 
+    "The heap capacity is not divisible by the size of a word of the OS (platform)");
+uintptr_t heap[HEAP_CAP] = {0};
+
 #define CHUNK_LIST_CAP 1024
 
 typedef struct Chunk {
-    char *start;
+    uintptr_t *start;
     size_t size;
 } Chunk;
 
@@ -45,7 +51,7 @@ void chunk_list_dump(const Chunk_List *list)
     }
 }
 
-int chunk_list_find(const Chunk_List *list, void *ptr)
+int chunk_list_find(const Chunk_List *list, uintptr_t *ptr)
 {
     for(size_t i = 0; i < list->count; ++i) {
         if(list->chunks[i].start == ptr) {
@@ -81,8 +87,6 @@ void chunk_list_remove(Chunk_List *list, size_t index)
     list->count --;
 }
 
-char heap[HEAP_CAP] = {0};
-
 Chunk_List alloced_chunks = {0};
 Chunk_List freed_chunks = {
     .count = 1,
@@ -93,23 +97,25 @@ Chunk_List freed_chunks = {
 
 Chunk_List tmp_chunks = {0};
 
-void *heap_alloc(size_t size) 
+void *heap_alloc(size_t size_bytes) 
 {
-    if(size <= 0) return NULL;
+    const size_t size_words = (size_bytes + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
+
+    if(size_words <= 0) return NULL;
 
     chunk_list_merge(&tmp_chunks, &freed_chunks);
     freed_chunks = tmp_chunks;
 
     for(size_t i = 0; i < freed_chunks.count; ++i) {
         const Chunk chunk = freed_chunks.chunks[i];
-        if(chunk.size >= size) {
+        if(chunk.size >= size_words) {
             chunk_list_remove(&freed_chunks, i);
 
-            const size_t tail_size = chunk.size - size;
-            chunk_list_insert(&alloced_chunks, chunk.start, size);
+            const size_t tail_size_words = chunk.size - size_words;
+            chunk_list_insert(&alloced_chunks, chunk.start, size_words);
 
-            if(tail_size > 0) {
-                chunk_list_insert(&freed_chunks, chunk.start + size, tail_size);
+            if(tail_size_words > 0) {
+                chunk_list_insert(&freed_chunks, chunk.start + size_words, tail_size_words);
             }
 
             return chunk.start;
@@ -138,15 +144,21 @@ void heap_collect(void)
     assert(false && "heap_collect is not implemented");
 }
 
+#define N 10
+void *ptrs[N] = {0};
+
 int main(void) {
-    for(int i = 1; i <= 10; ++i) {
-        void *p = heap_alloc(i);
+    for(int i = 0; i < N; ++i) {
+        ptrs[i] = heap_alloc(i);
+    }
+
+    for(int i = 0; i < N; ++i) {
         if(i % 2 == 0) {
-            heap_free(p);
+            heap_free(ptrs[i]);
         }
     }
 
-    // heap_alloc(10);
+    heap_alloc(10);
 
     chunk_list_dump(&alloced_chunks);
     chunk_list_dump(&freed_chunks);
