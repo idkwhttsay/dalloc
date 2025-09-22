@@ -14,22 +14,44 @@ struct Node {
     Node *right;
 };
 
-#define N 10
-void *ptrs[N] = {0};
+Node *generate_tree(size_t level_cur, size_t level_max)
+{
+    if (level_cur < level_max) {
+        Node *root = heap_alloc(sizeof(*root));
+        assert((char) level_cur - 'a' <= 'z');
+        root->x = level_cur + 'a';
+        root->left = generate_tree(level_cur + 1, level_max);
+        root->right = generate_tree(level_cur + 1, level_max);
+        return root;
+    } else {
+        return NULL;
+    }
+}
+
 
 int main(void) {
-    size_t heap_ptrs_count = 0;
-    for(size_t i = 0; i < alloced_chunks.count; ++i) {
-        for(size_t j = 0; j < alloced_chunks.chunks[i].size; ++j) {
-            uintptr_t *p = (uintptr_t*) alloced_chunks.chunks[i].start[j];
-            if(heap <= p && p < heap + HEAP_CAP_WORDS) {
-                printf("DETECTED HEAP POINTER: %p\n", (void*) p);
-                heap_ptrs_count ++;
-            }
-        }
+    stack_base = (const uintptr_t*)__builtin_frame_address(0);
+
+    // unreachable garbage (allocate garbage without saving the pointers)
+    for(size_t i = 0; i < 10; ++i) {
+        heap_alloc(i);
     }
 
-    printf("Detected %zu heap pointers\n", heap_ptrs_count);
+    // reachable garbage (allocate binary tree)
+    Node *root = generate_tree(0, 3);
+
+    // collect garbage from 10 heap_allocs
+    heap_collect();
+    chunk_list_dump(&alloced_chunks, "Alloced");
+    chunk_list_dump(&freed_chunks, "Freed");
+
+    printf("\n-----------------------\n");
+    
+    // make binary tree garbage and collect it
+    root = NULL;
+    heap_collect();
+    chunk_list_dump(&alloced_chunks, "Alloced");
+    chunk_list_dump(&freed_chunks, "Freed");
 
     return 0;
 }

@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #define CHUNK_LIST_CAP 1024
 #define HEAP_CAP_BYTES 640000
@@ -13,6 +15,7 @@ static_assert(HEAP_CAP_BYTES % sizeof(uintptr_t) == 0,
 #define HEAP_CAP_WORDS (HEAP_CAP_BYTES / sizeof(uintptr_t))
 
 extern uintptr_t heap[HEAP_CAP_WORDS];
+extern const uintptr_t *stack_base; 
 
 typedef struct Chunk {
     uintptr_t *start;
@@ -34,7 +37,7 @@ void heap_collect(void);
 
 void chunk_list_insert(Chunk_List *list, void *start, size_t size);
 void chunk_list_merge(Chunk_List *dst, const Chunk_List *src);
-void chunk_list_dump(const Chunk_List *list);
+void chunk_list_dump(const Chunk_List *list, const char *name);
 int chunk_list_find(const Chunk_List *list, uintptr_t *ptr);
 void chunk_list_remove(Chunk_List *list, size_t index);
 
